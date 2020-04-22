@@ -1,0 +1,10 @@
+for i
+do
+    cat "$i".asm >> $1_temp.asm
+done
+cd ../../nand2tetris/tools/
+./Assembler.sh ~/devel/C/cvm/$1_temp.asm
+cd ../../C/cvm
+mv $1_temp.hack $1.hack
+rm $1_temp.asm
+

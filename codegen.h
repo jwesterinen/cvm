@@ -4,6 +4,7 @@
 
 #define STACK_BASE 256
 #define FRAME_BASE 512
+#define EXPR_BASE 768
 
 // write instruction macro
 #define WRITE_INSTRUCTION(s) outputFile << "    " << s << std::endl;

@@ -30,7 +30,7 @@ void CVMCode::SetFileName(const char* _fileName)
 
 void CVMCode::WriteInit()
 {
-	// set the initial stack and frame base
+	// set the initial stack, frame, and expression base pointers
 	outputFile << "    " << "@" << STACK_BASE << std::endl;
 	outputFile << "    " << "D=A" << std::endl;
 	outputFile << "    " << "@SP" << std::endl;
@@ -39,6 +39,12 @@ void CVMCode::WriteInit()
 	outputFile << "    " << "D=A" << std::endl;
 	outputFile << "    " << "@BP" << std::endl;
 	outputFile << "    " << "M=D" << std::endl;
+	outputFile << "    " << "@" << EXPR_BASE << std::endl;
+	outputFile << "    " << "D=A" << std::endl;
+	outputFile << "    " << "@EP" << std::endl;
+	outputFile << "    " << "M=D" << std::endl;
+	
+	// jump to main()
 	outputFile << "    " << "@main" << std::endl;
 	outputFile << "    " << "0;JMP" << std::endl;
 }
@@ -94,36 +100,40 @@ void CVMCode::WriteEntry(const std::string& fctname, const std::string& localVar
 void CVMCode::WriteReturn()
 {
     // optimization: no need to return from main - WriteEnd() takes care of that
-    if (curFctName == "main") return;
+    //if (curFctName == "main") return;
     
     outputFile << "    " << "\n// return" << std::endl;
     
-    outputFile << "    " << "@BP" << std::endl;                 // move BP to SP
-    outputFile << "    " << "D=M" << std::endl;
+    outputFile << "    " << "@BP" << std::endl;                 // move BP to SP to remove local vars
+    outputFile << "    " << "D=M-1" << std::endl;
     outputFile << "    " << "@SP" << std::endl;
     outputFile << "    " << "M=D" << std::endl;    
     outputFile << "    " << "@SP" << std::endl;                 // restore old BP
-    outputFile << "    " << "A=M" << std::endl;
+    outputFile << "    " << "A=M+1" << std::endl;
     outputFile << "    " << "D=M" << std::endl;
     outputFile << "    " << "@BP" << std::endl;
     outputFile << "    " << "M=D" << std::endl;            
-    outputFile << "    " << "@SP" << std::endl;                 // pop old BP
-    outputFile << "    " << "M=M-1" << std::endl;
-    outputFile << "    " << "@" << curLocalVarQty << std::endl; // adjust SP to remove local vars and return address
-    outputFile << "    " << "D=A+1" << std::endl;
-    outputFile << "    " << "@SP" << std::endl;
-    outputFile << "    " << "M=M-D" << std::endl;
-    outputFile << "    " << "A=M+D" << std::endl;               // restore the return address and return
-    outputFile << "    " << "A=M" << std::endl;
-    outputFile << "    " << "0;JMP" << std::endl;
+    if (curFctName == "main")
+    {
+        outputFile << "    " << "@__Exit" << std::endl;         // for main() jump to the end of the program -- essentially "exit"
+        outputFile << "    " << "0;JMP" << std::endl;
+    }
+    else
+    {
+        outputFile << "    " << "@SP" << std::endl;                 // pop old BP, now return is TOS
+        outputFile << "    " << "M=M-1" << std::endl;
+        outputFile << "    " << "A=M+1" << std::endl;           // restore the return address and return
+        outputFile << "    " << "A=M" << std::endl;
+        outputFile << "    " << "0;JMP" << std::endl;
+    }
 }
 
 void CVMCode::WriteEnd()
 {
     outputFile << "    " << "\n// end" << std::endl;
     
-    outputFile << "(L" << ++labelId << ")" << std::endl;
-    outputFile << "    " << "@L" << labelId << std::endl;
+    outputFile << "(__Exit)" << std::endl;
+    outputFile << "    " << "@__Exit" << std::endl;
     outputFile << "    " << "0;JMP\n" << std::endl;
 }
 
@@ -144,6 +154,7 @@ void CVMCode::WriteAlu(const std::string& mod)
 		outputFile << "    " << "M=M-1" << std::endl;
 		outputFile << "    " << "A=M+1" << std::endl;
 		outputFile << "    " << "D=M" << std::endl;
+		outputFile << "    " << "A=A-1" << std::endl;
 		if (mod == "+")
 		{
 			outputFile << "    " << "M=M+D" << std::endl;			// TOS = x + y
@@ -161,6 +172,23 @@ void CVMCode::WriteAlu(const std::string& mod)
 			outputFile << "    " << "M=M|D" << std::endl;			// TOS = x | y
 		}
 	}
+	else if (mod == "*" || mod == "/")
+	{
+		if (mod == "*")
+		{
+			WriteCall("Multiply");			// TOS = x * y
+		}
+		else if (mod == "/")
+		{
+			WriteCall("Divide");			// TOS = x / y
+		}
+	    outputFile << "    " << "@retval" << std::endl;
+	    outputFile << "    " << "D=M" << std::endl;
+	    outputFile << "    " << "@SP" << std::endl;
+	    outputFile << "    " << "M=M-1" << std::endl;
+	    outputFile << "    " << "A=M" << std::endl;
+	    outputFile << "    " << "M=D" << std::endl;
+    }
 #ifdef NEG_AND_NOT_IMPLMENTED_IN_THE_PARSER	
 	else if (mod == "neg" || mod == "not" << std::endl;
 	{
@@ -184,6 +212,7 @@ void CVMCode::WriteAlu(const std::string& mod)
 		outputFile << "    " << "M=M-1" << std::endl;
 		outputFile << "    " << "A=M+1" << std::endl;
 		outputFile << "    " << "D=M" << std::endl;
+		outputFile << "    " << "A=A-1" << std::endl;
 		outputFile << "    " << "D=M-D" << std::endl;               // make the logical comparison (x-y)
 	    outputFile << "    " << "@SP" << std::endl;                 // replace TOS with True (assume True)
 	    outputFile << "    " << "A=M" << std::endl;
@@ -356,12 +385,14 @@ void CVMCode::WriteStore(const std::string& vartype, const std::string& offsetSt
         outputFile << "    " << "M=D" << std::endl;
         
         outputFile << "    " << "@SP" << std::endl;         // load D with the TOS-1 value
-        outputFile << "    " << "A=M-1" << std::endl;
+        outputFile << "    " << "A=M" << std::endl;
+        outputFile << "    " << "A=A-1" << std::endl;
         outputFile << "    " << "D=M" << std::endl;
-        outputFile << "    " << "@SP" << std::endl;         // get the ea from the tos
-        outputFile << "    " << "A=M" << std::endl;         //   [SP] = <segment addr>+<index>
-        outputFile << "    " << "A=M" << std::endl;         //   ea = [<segment addr>+<index>]
-        outputFile << "    " << "M=D" << std::endl;         // write the value to the ea
+        outputFile << "    " << "@SP" << std::endl;         // pop the ea
+        outputFile << "    " << "M=M-1" << std::endl;       //   [SP] = <segment addr>+<index>
+        outputFile << "    " << "A=M+1" << std::endl;       //   ea = [<segment addr>+<index>]
+        outputFile << "    " << "A=M" << std::endl;         // write the value to the ea
+        outputFile << "    " << "M=D" << std::endl;
     }
 }
 
