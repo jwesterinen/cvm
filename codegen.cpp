@@ -94,7 +94,7 @@ void CVMCode::WriteEntry(const std::string& fctname, const std::string& localVar
 	outputFile << "    " << "@" << curLocalVarQty << std::endl; // adjust SP past local variables
 	outputFile << "    " << "D=A" << std::endl;
     outputFile << "    " << "@SP" << std::endl;
-    outputFile << "    " << "M=M+D" << std::endl;
+    outputFile << "    " << "M=D+M" << std::endl;
 }
 
 void CVMCode::WriteReturn()
@@ -157,7 +157,7 @@ void CVMCode::WriteAlu(const std::string& mod)
 		outputFile << "    " << "A=A-1" << std::endl;
 		if (mod == "+")
 		{
-			outputFile << "    " << "M=M+D" << std::endl;			// TOS = x + y
+			outputFile << "    " << "M=D+M" << std::endl;			// TOS = x + y
 		}
 		else if (mod == "-")
 		{
@@ -165,11 +165,11 @@ void CVMCode::WriteAlu(const std::string& mod)
 		}
 		else if (mod == "&")
 		{
-			outputFile << "    " << "M=M&D" << std::endl;			// TOS = x & y
+			outputFile << "    " << "M=D&M" << std::endl;			// TOS = x & y
 		}
 		else if (mod == "|")
 		{
-			outputFile << "    " << "M=M|D" << std::endl;			// TOS = x | y
+			outputFile << "    " << "M=D|M" << std::endl;			// TOS = x | y
 		}
 	}
 	else if (mod == "*" || mod == "/")
@@ -311,7 +311,7 @@ void CVMCode::WriteAccessVar(const std::string& vartype, const std::string& offs
         outputFile << "    " << "@" << offset << "\t// " << globalName << std::endl; // adjust the var offset from the BP
         outputFile << "    " << "D=A" << std::endl;
         outputFile << "    " << "@BP" << std::endl;     // point to the var
-        outputFile << "    " << "A=M+D" << std::endl;
+        outputFile << "    " << "A=D+M" << std::endl;
     }
     else
     {
