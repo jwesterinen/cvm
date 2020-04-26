@@ -54,6 +54,5 @@ enum CVMCommandType
 #define ALU_OR      "|"         // bitwise or
 //#define ALU_NOT     "!"         // bitwise inverse
 
-// map for equates -- used to fixup the quantity of local variables while generating a function prolog
-typedef std::unordered_map<std::string, unsigned> EQU_MAP;
 
+// end of cvm.h

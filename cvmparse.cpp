@@ -6,16 +6,6 @@
 #include <array>
 #include "cvmparse.h"
 
-#if 0
-const std::string aluModList[]
-{
-	//"add", "sub", "neg", "eq", "gt", "lt", "and", "or", "not"
-	ALU_ADD, ALU_SUB, ALU_EQ, ALU_GT, ALU_LT, ALU_LE, ALU_GE, ALU_NE, ALU_AND, ALU_OR, ALU_NOT
-
-};
-int aluModListSize = sizeof aluModList / sizeof (std::string);
-#endif
-
 struct CommandSpec
 {
 	std::string name;
@@ -27,8 +17,7 @@ const CommandSpec zeroArgCmdList[]
 {
 	{"pop",     C_POP       },
     {"return",  C_RETURN    },
-    {"end",     C_END       },
-    {"equ",     C_EQU       }
+    {"end",     C_END       }
 };
 int zeroArgCmdListSize = sizeof zeroArgCmdList / sizeof (CommandSpec);
 
@@ -66,8 +55,7 @@ const CommandSpec globalArgCmdList[]
 };
 int globalArgCmdListSize = sizeof globalArgCmdList / sizeof(CommandSpec);
 
-CVMParser::CVMParser(std::ifstream& _inputFile, EQU_MAP& _equateMap) : 
-    inputFile(_inputFile), equateMap(_equateMap)
+CVMParser::CVMParser(std::ifstream& _inputFile) : inputFile(_inputFile)
 {
 }
 
@@ -89,18 +77,6 @@ void CVMParser::Advance()
 		std::getline(inputFile, curInstr);
 }
 
-void CVMParser::AddEquate()
-{
-    char symbol[80];
-    unsigned value;
-    
-    if (curInstr.find("equ") != std::string::npos)
-    {
-        sscanf(curInstr.c_str(), "equ\t%s\t%d", symbol, &value);
-        equateMap.insert(std::make_pair(symbol, value));
-	}
-}
-
 CVMCommandType CVMParser::CommandType()
 {
 	size_t pos;
@@ -111,7 +87,7 @@ CVMCommandType CVMParser::CommandType()
 	// pop                  ; clear stack       // OP_POP:      pop TOS
 	// return               ; end of function   // OP_RETURN:   function epilog
 	// end                  ; end of program    // C_END:       emit program epilog
-	// equ      $$3     2   ; main              // equate a symbol to a value - build string table on pass 1, ignore on pass 2
+	// $$3      equ     2   ; main              // equate a symbol to a value - build string table on pass 1, ignore on pass 2
 	
 	// commands with 1 args
 	// label    $$4                             // label:       convert to '('<new label>')'
@@ -133,8 +109,16 @@ CVMCommandType CVMParser::CommandType()
 	// parse the op from the instruction string
 	sscanf(curInstr.c_str(), "%s", cmdbuf);
 	cmd = cmdbuf;
-	std::cout << "parsing command: " << cmd << std::endl;
-
+	//std::cout << "parsing command: " << cmd << std::endl;
+	
+	// return equates back without parsing
+    if ((pos = curInstr.find("equ")) != std::string::npos)
+    {
+        // the single argument _is_ the current instruction, i.e. the full equate line
+        arg1 = curInstr;
+        return C_EQU;
+    }
+    
 	// determine the command type and parse the opnds
 	for (int i = 0; i < zeroArgCmdListSize; i++)
 	{
@@ -177,6 +161,7 @@ CVMCommandType CVMParser::CommandType()
 		
 	return C_ILLEGAL;
 }
+
 
 // end of cvmparse.cpp
 

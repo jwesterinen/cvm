@@ -8,8 +8,8 @@
 #include "codegen.h"
 
 
-CVMCode::CVMCode(std::ofstream& _outputFile, EQU_MAP& _equateMap) : 
-    outputFile(_outputFile), equateMap(_equateMap), labelId(0), returnId(0)
+CVMCode::CVMCode(std::ofstream& _outputFile) : 
+    outputFile(_outputFile), labelId(0), returnId(0)
 {
 }
 
@@ -62,15 +62,15 @@ void CVMCode::WriteCall(const std::string& fctname)
     outputFile << "    " << "\n// call" << std::endl;
     
     std::string label;
-    outputFile << "    " << "@L" << ++labelId << std::endl;  // push return address
+    outputFile << "    " << "@L" << ++labelId << std::endl;     // push return address
     outputFile << "    " << "D=A" << std::endl;
     outputFile << "    " << "@SP" << std::endl;
     outputFile << "    " << "M=M+1" << std::endl;               
     outputFile << "    " << "A=M" << std::endl;
     outputFile << "    " << "M=D" << std::endl;
-    outputFile << "    " << "@" << fctname << std::endl;    // jump to function
+    outputFile << "    " << "@" << fctname << std::endl;        // jump to function
     outputFile << "    " << "0;JMP" << std::endl;
-    outputFile << "(L" << labelId << ")" << std::endl;       // return address
+    outputFile << "(L" << labelId << ")" << std::endl;          // return address
 }
 
 void CVMCode::WriteEntry(const std::string& fctname, const std::string& localVarQty)
@@ -78,7 +78,6 @@ void CVMCode::WriteEntry(const std::string& fctname, const std::string& localVar
     outputFile << "    " << "\n// entry" << std::endl;
 
     curFctName = fctname;    
-    curLocalVarQty = equateMap[localVarQty];
     
     outputFile << "(" << fctname << ")" << std::endl;
     outputFile << "    " << "@BP" << std::endl;                 // push current BP
@@ -91,7 +90,7 @@ void CVMCode::WriteEntry(const std::string& fctname, const std::string& localVar
     outputFile << "    " << "D=M" << std::endl;
     outputFile << "    " << "@BP" << std::endl;
     outputFile << "    " << "M=D" << std::endl;
-	outputFile << "    " << "@" << curLocalVarQty << std::endl; // adjust SP past local variables
+	outputFile << "    " << "@" << localVarQty << std::endl;    // adjust SP past local variables
 	outputFile << "    " << "D=A" << std::endl;
     outputFile << "    " << "@SP" << std::endl;
     outputFile << "    " << "M=D+M" << std::endl;
@@ -100,7 +99,6 @@ void CVMCode::WriteEntry(const std::string& fctname, const std::string& localVar
 void CVMCode::WriteReturn()
 {
     // optimization: no need to return from main - WriteEnd() takes care of that
-    //if (curFctName == "main") return;
     
     outputFile << "    " << "\n// return" << std::endl;
     
@@ -120,7 +118,7 @@ void CVMCode::WriteReturn()
     }
     else
     {
-        outputFile << "    " << "@SP" << std::endl;                 // pop old BP, now return is TOS
+        outputFile << "    " << "@SP" << std::endl;             // pop old BP, now return is TOS
         outputFile << "    " << "M=M-1" << std::endl;
         outputFile << "    " << "A=M+1" << std::endl;           // restore the return address and return
         outputFile << "    " << "A=M" << std::endl;
@@ -150,37 +148,37 @@ void CVMCode::WriteAlu(const std::string& mod)
     
 	if (mod == "+" || mod == "-" || mod == "&" || mod == "|")
 	{
-		outputFile << "    " << "@SP" << std::endl;					// pop y
+		outputFile << "    " << "@SP" << std::endl;             // pop y
 		outputFile << "    " << "M=M-1" << std::endl;
 		outputFile << "    " << "A=M+1" << std::endl;
 		outputFile << "    " << "D=M" << std::endl;
 		outputFile << "    " << "A=A-1" << std::endl;
 		if (mod == "+")
 		{
-			outputFile << "    " << "M=D+M" << std::endl;			// TOS = x + y
+			outputFile << "    " << "M=D+M" << std::endl;       // TOS = x + y
 		}
 		else if (mod == "-")
 		{
-			outputFile << "    " << "M=M-D" << std::endl;			// TOS = x - y
+			outputFile << "    " << "M=M-D" << std::endl;	    // TOS = x - y
 		}
 		else if (mod == "&")
 		{
-			outputFile << "    " << "M=D&M" << std::endl;			// TOS = x & y
+			outputFile << "    " << "M=D&M" << std::endl;	    // TOS = x & y
 		}
 		else if (mod == "|")
 		{
-			outputFile << "    " << "M=D|M" << std::endl;			// TOS = x | y
+			outputFile << "    " << "M=D|M" << std::endl;	    // TOS = x | y
 		}
 	}
 	else if (mod == "*" || mod == "/")
 	{
 		if (mod == "*")
 		{
-			WriteCall("Multiply");			// TOS = x * y
+			WriteCall("Multiply");			                    // TOS = x * y
 		}
 		else if (mod == "/")
 		{
-			WriteCall("Divide");			// TOS = x / y
+			WriteCall("Divide");			                    // TOS = x / y
 		}
 	    outputFile << "    " << "@retval" << std::endl;
 	    outputFile << "    " << "D=M" << std::endl;
@@ -192,57 +190,56 @@ void CVMCode::WriteAlu(const std::string& mod)
 #ifdef NEG_AND_NOT_IMPLMENTED_IN_THE_PARSER	
 	else if (mod == "neg" || mod == "not" << std::endl;
 	{
-		outputFile << "    " << "@SP" << std::endl;					// pop y
+		outputFile << "    " << "@SP" << std::endl;			    // pop y
 		outputFile << "    " << "A=M" << std::endl;
 		if (mod == "neg")
 		{
-			outputFile << "    " << "M=-M" << std::endl;			// [sp-1] = -y
+			outputFile << "    " << "M=-M" << std::endl;	    // [sp-1] = -y
 		}
 		else if (mod == "not")
 		{
-			outputFile << "    " << "M=!M" << std::endl;			// [sp-1] = !y
+			outputFile << "    " << "M=!M" << std::endl;	    // [sp-1] = !y
 		}
 	}
 #endif
-	// FIXME: is there any way to assume each if clause results in FALSE and only change if TRUE
 	else if (mod == "==" || mod == "!=" || mod == ">" || mod == ">=" || mod == "<" || mod == "<=")
 	{
 	    
-		outputFile << "    " << "@SP" << std::endl;					// pop y
+		outputFile << "    " << "@SP" << std::endl;			    // pop y
 		outputFile << "    " << "M=M-1" << std::endl;
 		outputFile << "    " << "A=M+1" << std::endl;
 		outputFile << "    " << "D=M" << std::endl;
 		outputFile << "    " << "A=A-1" << std::endl;
-		outputFile << "    " << "D=M-D" << std::endl;               // make the logical comparison (x-y)
-	    outputFile << "    " << "@SP" << std::endl;                 // replace TOS with True (assume True)
+		outputFile << "    " << "D=M-D" << std::endl;           // make the logical comparison (x-y)
+	    outputFile << "    " << "@SP" << std::endl;             // replace TOS with True (assume True)
 	    outputFile << "    " << "A=M" << std::endl;
 	    outputFile << "    " << "M=-1" << std::endl;
 		outputFile << "    " << "@LT" << ++labelId << std::endl;    // jump if the following logical expressions are True
 		if (mod == "==")
 		{
-			outputFile << "    " << "D;JEQ" << std::endl;           // x == y
+			outputFile << "    " << "D;JEQ" << std::endl;       // x == y
 		}
 		else if (mod == "!=")
 		{
-			outputFile << "    " << "D;JNE" << std::endl;           // x != y           
+			outputFile << "    " << "D;JNE" << std::endl;       // x != y           
 		}
 		else if (mod == ">")
 		{
-			outputFile << "    " << "D;JGT" << std::endl;           // x > y
+			outputFile << "    " << "D;JGT" << std::endl;       // x > y
 		}
 		else if (mod == ">=")   
 		{
-			outputFile << "    " << "D;JGE" << std::endl;           // x >= y
+			outputFile << "    " << "D;JGE" << std::endl;       // x >= y
 		}
 		else if (mod == "<")
 		{
-			outputFile << "    " << "D;JLT" << std::endl;           // x < y
+			outputFile << "    " << "D;JLT" << std::endl;       // x < y
 		}
 		else if (mod == "<=")
 		{
-			outputFile << "    " << "D;JLE" << std::endl;           // x <= y
+			outputFile << "    " << "D;JLE" << std::endl;       // x <= y
 		}
-		outputFile << "    " << "@SP" << std::endl;					// otherwise replace TOS with False
+		outputFile << "    " << "@SP" << std::endl;			    // otherwise replace TOS with False
 		outputFile << "    " << "A=M" << std::endl;
 		outputFile << "    " << "M=0" << std::endl;
 		outputFile << "(LT" << labelId << ")" << std::endl;
@@ -396,7 +393,12 @@ void CVMCode::WriteStore(const std::string& vartype, const std::string& offsetSt
     }
 }
 
+// pass the equate line directly to the output file, the assembler will handle it
+void CVMCode::WriteEqu(const std::string& equ)
+{
+    outputFile << equ << std::endl;
+}
+
+
 // end of codegen.cpp
-
-
 

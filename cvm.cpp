@@ -14,25 +14,18 @@
 #include "cvmparse.h"
 #include "codegen.h"
 
-// equate map
-EQU_MAP equateMap;
-
-// file path separator
-std::string separator;
-
 // Returns a list of files in a directory (except the ones that begin with a dot)
 void GetFilesInDirectory(std::vector<std::string> &out, const std::string &directory)
 {
 	DIR *dir;
 	class dirent *ent;
 	class stat st;
-	separator = "/";
 
 	dir = opendir(directory.c_str());
 	while ((ent = readdir(dir)) != NULL) 
 	{
 		const std::string file_name = ent->d_name;
-		const std::string full_file_name = directory + separator + file_name;
+		const std::string full_file_name = directory + "/" + file_name;
 
 		if (file_name[0] == '.')
 			continue;
@@ -57,6 +50,7 @@ int main(int argc, char** argv)
 		fprintf(stderr, "no input file specified\n");
 		return 1;
 	}
+	
 	// get a list of all of the source files
 	std::string source(argv[1]);
 	std::vector<std::string> inputFileNames;
@@ -81,17 +75,17 @@ int main(int argc, char** argv)
 	else
 	{
 		std::string outfilePath(outfileName);
-		if ((pos = outfileName.find_last_of(separator)) != std::string::npos)
+		if ((pos = outfileName.find_last_of("/")) != std::string::npos)
 		{
 			outfileName = outfilePath + outfileName.substr(pos) + ".asm";
 		}
 		else
 		{
-			outfileName = outfilePath + separator + outfileName + ".asm";
+			outfileName = outfilePath + "/" + outfileName + ".asm";
 		}
 	}
 	std::ofstream outputFile(outfileName);
-	CVMCode code(outputFile, equateMap);
+	CVMCode code(outputFile);
 
 	// generate the bootstrap code
 	code.WriteInit();
@@ -109,7 +103,7 @@ int main(int argc, char** argv)
 		{
 			std::cout << "cvm: cannot open file " << argv[1] << std::endl;
 		}
-		CVMParser parser(inputFile, equateMap);
+		CVMParser parser(inputFile);
 
 		// let the code generator know what input file name it's working on for correct labels
 		std::string inputFileBaseName(*i);
@@ -122,19 +116,8 @@ int main(int argc, char** argv)
 			inputFileBaseName = inputFileBaseName.substr(0, pos);
 		}
 		code.SetFileName(inputFileBaseName.c_str());
-		
-		// first pass: find all local var qty equates and put them in the equate map
-		while (parser.HasMoreCommands())
-		{
-			parser.Advance();
-			parser.AddEquate();
-		}
-		
-		// move back to the beginning of the input file
-		inputFile.clear();
-		inputFile.seekg(0);
 
-        // second pass: parse each line of the file
+        // emit code based on the VM command
         CVMCommandType cmdType;
 		while (parser.HasMoreCommands())
 		{
@@ -194,6 +177,7 @@ int main(int argc, char** argv)
 					break;
 
 				case C_EQU:
+				    code.WriteEqu(parser.Arg1());
 					break;
 
 				default:
@@ -205,6 +189,7 @@ int main(int argc, char** argv)
 
 	return 0;
 }
+
 
 // end of cvm.cpp
 

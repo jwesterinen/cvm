@@ -33,7 +33,7 @@ WRITE_INSTRUCTION("M=D")	\
 class CVMCode
 {
 public:
-	CVMCode(std::ofstream& _outputFile, EQU_MAP& _equateMap);
+	CVMCode(std::ofstream& _outputFile);
 	virtual ~CVMCode();
 
 	void SetFileName(const char* _fileName);
@@ -52,14 +52,17 @@ public:
 	void WriteInc(const std::string& vartype, const std::string& offset, const std::string& globalName);
 	void WriteLoad(const std::string& vartype, const std::string& offset, const std::string& globalName);
 	void WriteStore(const std::string& vartype, const std::string& offset, const std::string& globalName);
+	void WriteEqu(const std::string&);
 
 private:
 	std::ofstream& outputFile;
-    EQU_MAP& equateMap;
 	std::string curFileName;
 	std::string curFctName;
 	int labelId;
 	int returnId;
     unsigned curLocalVarQty;
 };
+
+
+// end of codegen.h
 
