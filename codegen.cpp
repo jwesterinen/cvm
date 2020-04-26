@@ -180,7 +180,7 @@ void CVMCode::WriteAlu(const std::string& mod)
 		{
 			WriteCall("Divide");			                    // TOS = x / y
 		}
-	    outputFile << "    " << "@retval" << std::endl;
+	    outputFile << "    " << "@RETVAL" << std::endl;
 	    outputFile << "    " << "D=M" << std::endl;
 	    outputFile << "    " << "@SP" << std::endl;
 	    outputFile << "    " << "M=M-1" << std::endl;
@@ -278,8 +278,8 @@ void CVMCode::WriteAccessVar(const std::string& vartype, const std::string& offs
     {
         if (offset == 0)
         {
-            // global 0 signifies the global address of the return value of the function, "retval"
-	        outputFile << "    " << "@retval" << "\t// fct return value" << std::endl;
+            // global 0 signifies the global address of the return value of the function, "RETVAL"
+	        outputFile << "    " << "@RETVAL" << "\t// fct return value" << std::endl;
 	    }
 	    else
 	    {
